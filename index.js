@@ -2,13 +2,13 @@ const express = require('express');
 const app = express();
 const keys = require('./config/keys');
 require('./models/Users');
+require('./models/Surveys');
 require('./services/passport');
 const cookieSession = require('cookie-session');
 const passport = require('passport');
 const bodyParser = require('body-parser');
 
 const mongoose = require('mongoose');
-const { Schema } = mongoose;
 mongoose.connect('mongodb://localhost/email-app', { useNewUrlParser: true, useUnifiedTopology: true });
 
 app.use(bodyParser.json());
@@ -23,6 +23,7 @@ app.use(passport.session());
 
 require('./routes/authRoutes')(app);
 require('./routes/billingRoutes')(app);
+require('./routes/surveyRoutes')(app);
 
 if (process.env.NODE_ENV === 'production') {
     // if any get reqest not known, look in the client directory
