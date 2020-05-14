@@ -12,6 +12,7 @@ module.exports = app => {
     })
 
     app.post('/api/surveys', requireLogin, requireCredits, async (req, res) => {
+        console.log('app.post /api/surveys', req.body)
         const { title, subject, body, recipients } = req.body;
         
         const survey = new Survey({
@@ -36,4 +37,9 @@ module.exports = app => {
             res.status(422).send(err);
         }
     });
+
+    app.post('/api/surveys/webhooks', (req, res) => {
+        console.log('SHOULD BE SHOWING THANKS FOR VOTING', req.body);
+        res.send({});
+    })
 };
