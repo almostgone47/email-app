@@ -3,11 +3,19 @@ const requireLogin = require('../middlewares/requireLogin');
 const requireCredits = require('../middlewares/requireCredits');
 const Mailer = require('../services/Mailer');
 const template = require('../services/emailTemplates/surveyTemplate');
+const Path = require('path-parser');
+const { URL } = require('url');
 
 const Survey = mongoose.model('surveys');
 
 module.exports = app => {
-    app.get('/api/surveys/thanks', (req, res) => {
+    app.get('/api/surveys', requireLogin, async (req, res) => {
+        const surveys = await Survey.find({ _user: req.user.id }).select({ recipients: false });
+
+        res.send(surveys); 
+    })
+
+    app.get('/api/surveys/:surveyId/:choice', (req, res) => {
         res.send('Thanks for voting!');
     })
 
@@ -39,7 +47,28 @@ module.exports = app => {
     });
 
     app.post('/api/surveys/webhooks', (req, res) => {
-        console.log('SHOULD BE SHOWING THANKS FOR VOTING', req.body);
-        res.send({});
+        let events = req.body.map(event => {
+            const pathname = new URL(event.url).pathname;
+            const p = new Path('/api/surveys/:surveyId/:choice');
+            const match = p.test(pathname);
+            if (match) {
+                return { email: event.email, surveyId: match.surveyId, choice: match.choice };
+            }
+        });
+        events = events.filter(Boolean);
+        events = [...new Set(events)];
+        events.forEach(({ surveyId, email, choice }) => {
+            Survey.updateOne({
+                _id: surveyId,
+                recipients: {
+                    $elemMatch: { email: email, responded: false }
+                }
+            }, {
+                $inc: { [choice]: 1 },
+                $set: { 'recipients.$.responded': true },
+                lastResponded: Date.now()
+            }).exec();
+        })
+        console.log('EVENTS: ', events)
     })
 };
